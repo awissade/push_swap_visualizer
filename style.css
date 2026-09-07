@@ -1,0 +1,437 @@
+/* ============================================================
+   push_swap visualizer — custom layer on top of tailwind cdn
+   ============================================================ */
+
+:root {
+  --bar-h: 22px;         /* height of a bar row */
+  --bar-gap: 3px;        /* gap between rows */
+  --anim: 220ms;         /* base transition duration */
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-image:
+    radial-gradient(60rem 60rem at 12% -10%, rgba(16, 185, 129, 0.07), transparent 60%),
+    radial-gradient(50rem 50rem at 100% 0%, rgba(217, 70, 239, 0.06), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* ---------- focus ring (accessibility) ---------- */
+:where(button, input, textarea, a, [tabindex]):focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary,
+.btn-ghost,
+.btn-ctl,
+.btn-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-family: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--anim), color var(--anim),
+              box-shadow var(--anim), transform 90ms ease, border-color var(--anim);
+}
+
+.btn-primary {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8125rem;
+  border-radius: 0.5rem;
+  color: #04120c;
+  background: linear-gradient(180deg, #34d399, #10b981);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 18px -8px rgba(16, 185, 129, 0.8);
+}
+.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:active { transform: translateY(1px); }
+
+.btn-ghost,
+.btn-ctl {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+  color: #cbd5e1;
+  background: #1e2739;
+  border: 1px solid #2a3549;
+}
+.btn-ghost:hover,
+.btn-ctl:hover {
+  background: #26314699;
+  border-color: #3f4d68;
+  color: #fff;
+}
+.btn-ghost:active,
+.btn-ctl:active { transform: translateY(1px); }
+
+.btn-ctl:disabled,
+.btn-primary:disabled,
+.btn-op:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+/* op keypad buttons */
+.op-group {
+  border: 1px solid #2a354980;
+  border-radius: 0.6rem;
+  background: #0f142080;
+  padding: 0.6rem;
+}
+.op-group-title {
+  margin-bottom: 0.5rem;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.btn-op {
+  min-width: 3.1rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.03em;
+  border-radius: 0.45rem;
+  color: #e2e8f0;
+  background: #1b2334;
+  border: 1px solid #2f3b52;
+}
+.btn-op:hover {
+  color: #fff;
+  background: #24304a;
+  border-color: #4b5c7d;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+.btn-op:active { transform: translateY(1px) scale(0.98); }
+
+/* flash when an op is triggered (mouse or keyboard) */
+.btn-op.fired {
+  animation: opFire 320ms ease-out;
+}
+@keyframes opFire {
+  0%   { background: #38bdf8; color: #04121c; box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
+  100% { background: #1b2334; color: #e2e8f0; box-shadow: 0 0 0 14px rgba(56, 189, 248, 0); }
+}
+
+/* chord armed state */
+.btn-op.armed {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+}
+
+/* ---------- keycap ---------- */
+.kbd {
+  display: inline-block;
+  min-width: 1.35rem;
+  padding: 0.05rem 0.3rem;
+  margin: 0 0.05rem;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  color: #cbd5e1;
+  background: #1e2739;
+  border: 1px solid #354764;
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+}
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #2a354999;
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, #131a28, #0f1420);
+}
+.stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   STACK TRACK + BARS
+   ============================================================ */
+.stack-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--bar-gap);
+  /* --track-max is the cap; fitTracks() in app.js measures it, then pins both
+     tracks to a shared --track-h so a push never resizes a panel. Small stacks
+     get a height just tall enough for their bars, large ones are thinned. */
+  --track-max: clamp(320px, 52vh, 620px);
+  --track-h: 8.5rem;
+  height: var(--track-h);
+  max-height: var(--track-max);
+  padding: 0.4rem;
+  /* bars are fitted to the height by JS, so there is normally nothing to
+     scroll; `.scrolls` is added only when a set cannot fit at 1px per row */
+  overflow: hidden;
+  border: 1px solid #2a354980;
+  border-radius: 0.6rem;
+  background:
+    repeating-linear-gradient(180deg, #0b101a 0 2px, transparent 2px 100%),
+    #0a0e17;
+}
+
+/* Dense mode: the set is too tall for the cap, so JS thins the rows to --fit-h.
+   Labels no longer fit at that size, so they are hidden. */
+.stack-track.dense {
+  --bar-gap: var(--fit-gap, 1px);
+  --bar-h: var(--fit-h, 8px);
+}
+.stack-track.dense .bar-label { display: none; }
+
+/* a set too large to fit even at 1px per row: scroll rather than clip */
+.stack-track.scrolls { overflow-y: auto; }
+
+/* hairline bars: square off the corners so 1px rows stay visible */
+.stack-track.flush .bar-row,
+.stack-track.flush .bar-fill { border-radius: 1px; }
+
+.empty-note {
+  margin: auto;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.bar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 var(--bar-h);
+  height: var(--bar-h);
+  min-height: var(--bar-min, 3px);
+  border-radius: 3px;
+  transition: transform var(--anim) cubic-bezier(0.22, 0.61, 0.36, 1),
+              opacity var(--anim) ease,
+              filter var(--anim) ease;
+}
+
+.bar-fill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 3px;
+  padding-right: 0.35rem;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #065f46, #10b981);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transition: width var(--anim) ease, background-color var(--anim) ease,
+              box-shadow var(--anim) ease;
+}
+
+/* stack b palette */
+.track-b .bar-fill { background: linear-gradient(90deg, #701a75, #d946ef); }
+
+.bar-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* value label rendered outside the fill when the bar is too short */
+.bar-label.outside {
+  position: absolute;
+  left: calc(var(--w, 0%) + 0.35rem);
+  color: #cbd5e1;
+  text-shadow: none;
+}
+
+/* top-of-stack marker */
+.bar-row.is-top .bar-fill {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+              0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.bar-row.is-top::before {
+  content: "";
+  position: absolute;
+  left: -0.4rem;
+  top: 50%;
+  width: 3px;
+  height: 70%;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: #f8fafc;
+}
+
+/* ---------- highlight cues ---------- */
+.bar-row.hl-swap .bar-fill {
+  background: linear-gradient(90deg, #15803d, #4ade80) !important;
+  box-shadow: 0 0 0 1px #4ade80, 0 0 16px -2px rgba(74, 222, 128, 0.75);
+}
+.bar-row.hl-push .bar-fill {
+  background: linear-gradient(90deg, #1d4ed8, #60a5fa) !important;
+  box-shadow: 0 0 0 1px #60a5fa, 0 0 16px -2px rgba(96, 165, 250, 0.8);
+}
+.bar-row.hl-rotate .bar-fill {
+  background: linear-gradient(90deg, #b45309, #fbbf24) !important;
+  box-shadow: 0 0 0 1px #fbbf24, 0 0 16px -2px rgba(251, 191, 36, 0.7);
+}
+.bar-row.hl-swap,
+.bar-row.hl-push,
+.bar-row.hl-rotate { z-index: 2; }
+
+/* entry animations */
+.bar-row.enter-push { animation: enterPush var(--anim) ease-out; }
+@keyframes enterPush {
+  from { opacity: 0; transform: translateX(-14px) scaleY(0.6); }
+  to   { opacity: 1; transform: none; }
+}
+
+.bar-row.enter-rotate { animation: enterRotate var(--anim) ease-out; }
+@keyframes enterRotate {
+  from { opacity: 0.2; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.bar-row.enter-rotate-up { animation: enterRotateUp var(--anim) ease-out; }
+@keyframes enterRotateUp {
+  from { opacity: 0.2; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* sorted pulse on stack A panel */
+.sorted-pulse { animation: sortedPulse 700ms ease-out; }
+@keyframes sortedPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  100% { box-shadow: 0 0 0 18px rgba(52, 211, 153, 0); }
+}
+
+/* ============================================================
+   ACTION LOG
+   ============================================================ */
+/* establishes the offset parent that scrollLogToActive() measures against */
+#log { position: relative; }
+
+.log-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.log-row:hover { background: #17203099; color: #e2e8f0; }
+
+.log-idx {
+  min-width: 2.6rem;
+  font-size: 10px;
+  text-align: right;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+.log-op { font-weight: 700; letter-spacing: 0.04em; }
+
+.log-row.done { color: #94a3b8; }
+.log-row.active {
+  background: rgba(56, 189, 248, 0.14);
+  color: #e0f2fe;
+  box-shadow: inset 2px 0 0 #38bdf8;
+}
+.log-row.active .log-idx { color: #7dd3fc; }
+.log-row.pending { color: #8090a6; }
+
+/* ============================================================
+   RANGE SLIDERS
+   ============================================================ */
+.range {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: #1e2739;
+  border: 1px solid #2a3549;
+  cursor: pointer;
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #34d399;
+  border: 2px solid #04120c;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2);
+  transition: transform 120ms ease;
+}
+.range::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #34d399;
+  border: 2px solid #04120c;
+}
+.range:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============================================================
+   SCROLLBARS
+   ============================================================ */
+.scroll-slim { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+.scroll-slim::-webkit-scrollbar,
+.stack-track::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-slim::-webkit-scrollbar-track,
+.stack-track::-webkit-scrollbar-track { background: transparent; }
+.scroll-slim::-webkit-scrollbar-thumb,
+.stack-track::-webkit-scrollbar-thumb {
+  background: #2f3b52;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover,
+.stack-track::-webkit-scrollbar-thumb:hover { background: #475569; background-clip: content-box; }
+
+.stack-track { scrollbar-width: thin; scrollbar-color: #2f3b52 transparent; }
+
+/* ============================================================
+   RESPONSIVE + MOTION PREFERENCES
+   ============================================================ */
+@media (max-width: 640px) {
+  :root { --bar-h: 18px; }
+  .stat-value { font-size: 1.05rem; }
+  .stack-track { --track-max: clamp(220px, 44vh, 420px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  html { scroll-behavior: auto; }
+}

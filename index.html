@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>push_swap visualizer</title>
+<meta name="description" content="Static visualizer for the 42 School push_swap project: replay a script of operations or play manually.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: { 900: '#0a0e17', 800: '#0f1420', 700: '#161d2c', 600: '#1e2739', 500: '#2a3549' },
+        },
+        fontFamily: {
+          mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-ink-900 text-slate-200 font-mono min-h-screen antialiased">
+
+<!-- ===================== HEADER ===================== -->
+<header class="sticky top-0 z-30 border-b border-ink-500/60 bg-ink-900/85 backdrop-blur">
+  <div class="mx-auto max-w-[1600px] px-4 py-3 flex items-center gap-3 flex-wrap">
+    <div class="flex items-center gap-2.5">
+      <div class="grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30">
+        <i data-lucide="layers" class="h-5 w-5"></i>
+      </div>
+      <div class="leading-tight">
+        <h1 class="text-base font-semibold tracking-tight text-white">push_swap<span class="text-emerald-400">_vis</span></h1>
+        <p class="text-[11px] text-slate-400">42 school &middot; stack sorting visualizer</p>
+      </div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2 flex-wrap text-[11px]">
+      <span id="modeBadge" class="inline-flex items-center gap-1.5 rounded-md bg-sky-500/15 px-2.5 py-1 font-semibold text-sky-300 ring-1 ring-sky-500/30">
+        <i data-lucide="gamepad-2" class="h-3.5 w-3.5"></i><span id="modeBadgeText">manual mode</span>
+      </span>
+      <span id="sortedBadge" role="status" class="inline-flex items-center gap-1.5 rounded-md bg-slate-500/15 px-2.5 py-1 font-semibold text-slate-400 ring-1 ring-slate-500/30">
+        <i data-lucide="minus" class="h-3.5 w-3.5"></i><span>not sorted</span>
+      </span>
+      <a href="#help" class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-slate-400 ring-1 ring-ink-500 hover:text-white hover:ring-slate-500">
+        <i data-lucide="keyboard" class="h-3.5 w-3.5"></i> shortcuts
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-[1600px] px-4 py-5 grid gap-5 lg:grid-cols-[minmax(300px,360px),1fr] items-start">
+
+  <!-- ===================== SIDEBAR : INPUT ===================== -->
+  <section class="grid gap-4 w-full lg:sticky lg:top-[73px]">
+
+    <!-- stack A input -->
+    <div class="rounded-xl border border-ink-500/60 bg-ink-800/70 p-4">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <i data-lucide="hash" class="h-4 w-4 text-emerald-400"></i> stack a &middot; numbers
+        </h2>
+        <span id="countBadge" class="rounded bg-ink-600 px-2 py-0.5 text-[11px] text-slate-400">0 values</span>
+      </div>
+
+      <textarea id="inputA" rows="3" spellcheck="false"
+        class="w-full resize-y rounded-lg border border-ink-500 bg-ink-900 px-3 py-2 text-sm text-slate-100 placeholder-slate-400 outline-none transition focus:border-emerald-500/70 focus:ring-2 focus:ring-emerald-500/20"
+        placeholder="2 1 3 6 5 8 -4    (spaces, commas or newlines)"></textarea>
+
+      <p id="inputError" class="mt-2 hidden items-start gap-1.5 rounded-md bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-300 ring-1 ring-rose-500/25"></p>
+
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button data-preset="5"   class="btn-ghost"><i data-lucide="dice-3" class="h-3.5 w-3.5"></i> random 5</button>
+        <button data-preset="100" class="btn-ghost"><i data-lucide="dice-4" class="h-3.5 w-3.5"></i> random 100</button>
+        <button data-preset="500" class="btn-ghost"><i data-lucide="dice-6" class="h-3.5 w-3.5"></i> random 500</button>
+        <button id="btnReverse"   class="btn-ghost"><i data-lucide="arrow-down-narrow-wide" class="h-3.5 w-3.5"></i> reverse</button>
+      </div>
+
+      <button id="btnLoad" class="btn-primary mt-2 w-full">
+        <i data-lucide="play-circle" class="h-4 w-4"></i> load &amp; reset
+      </button>
+    </div>
+
+    <!-- operations script -->
+    <div class="rounded-xl border border-ink-500/60 bg-ink-800/70 p-4">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <i data-lucide="terminal" class="h-4 w-4 text-sky-400"></i> operations script
+        </h2>
+        <button id="btnClearOps" class="text-[11px] text-slate-400 hover:text-rose-300">clear</button>
+      </div>
+
+      <textarea id="inputOps" rows="5" spellcheck="false"
+        class="w-full resize-y rounded-lg border border-ink-500 bg-ink-900 px-3 py-2 text-sm leading-relaxed text-slate-100 placeholder-slate-400 outline-none transition focus:border-sky-500/70 focus:ring-2 focus:ring-sky-500/20"
+        placeholder="paste push_swap output:&#10;pb&#10;ra&#10;sa&#10;pa"></textarea>
+
+      <p id="opsError" class="mt-2 hidden items-start gap-1.5 rounded-md bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-300 ring-1 ring-rose-500/25"></p>
+      <p class="mt-2 text-[11px] leading-relaxed text-slate-400">
+        empty script &rarr; <span class="text-sky-300">manual playground</span>.
+        with a script &rarr; <span class="text-emerald-300">replay mode</span>.
+      </p>
+    </div>
+
+    <!-- action log -->
+    <div class="rounded-xl border border-ink-500/60 bg-ink-800/70 p-4">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <i data-lucide="scroll-text" class="h-4 w-4 text-amber-400"></i> action log
+        </h2>
+        <span id="logCount" class="rounded bg-ink-600 px-2 py-0.5 text-[11px] text-slate-400">0</span>
+      </div>
+      <div id="log" class="scroll-slim h-52 overflow-y-auto rounded-lg border border-ink-500/70 bg-ink-900 p-1.5 text-[12px]">
+        <p class="px-2 py-6 text-center text-slate-400">no operations yet</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MAIN : VISUALIZER ===================== -->
+  <section class="grid gap-5 min-w-0">
+
+    <!-- dashboard -->
+    <div class="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div class="stat-card">
+        <span class="stat-label"><i data-lucide="footprints" class="h-3.5 w-3.5"></i> moves</span>
+        <span class="stat-value"><span id="statStep">0</span><span class="text-slate-400 text-base"> / <span id="statTotal">0</span></span></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label"><i data-lucide="chevrons-left-right" class="h-3.5 w-3.5"></i> last op</span>
+        <span id="statLastOp" class="stat-value text-sky-300">&mdash;</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label"><i data-lucide="align-left" class="h-3.5 w-3.5"></i> size a</span>
+        <span id="statSizeA" class="stat-value text-emerald-300">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label"><i data-lucide="align-right" class="h-3.5 w-3.5"></i> size b</span>
+        <span id="statSizeB" class="stat-value text-fuchsia-300">0</span>
+      </div>
+    </div>
+
+    <!-- stacks -->
+    <div class="grid gap-4 xl:grid-cols-2">
+      <!-- stack A -->
+      <div class="rounded-xl border border-emerald-500/25 bg-ink-800/60 p-4">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-emerald-300">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span> stack a
+          </h3>
+          <div class="flex items-center gap-2 text-[11px] text-slate-400">
+            <span class="rounded bg-ink-700 px-2 py-0.5">top: <span id="topA" class="text-slate-200">&mdash;</span></span>
+            <span class="rounded bg-ink-700 px-2 py-0.5"><span id="lenA" class="text-slate-200">0</span> el</span>
+          </div>
+        </div>
+        <div class="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-widest text-emerald-500/70">
+          <i data-lucide="corner-left-down" class="h-3 w-3"></i> top
+          <span class="ml-auto flex items-center gap-1">bottom <i data-lucide="corner-right-down" class="h-3 w-3"></i></span>
+        </div>
+        <div id="trackA" class="stack-track"><p class="empty-note">empty</p></div>
+      </div>
+
+      <!-- stack B -->
+      <div class="rounded-xl border border-fuchsia-500/25 bg-ink-800/60 p-4">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-fuchsia-300">
+            <span class="h-2 w-2 rounded-full bg-fuchsia-400"></span> stack b
+          </h3>
+          <div class="flex items-center gap-2 text-[11px] text-slate-400">
+            <span class="rounded bg-ink-700 px-2 py-0.5">top: <span id="topB" class="text-slate-200">&mdash;</span></span>
+            <span class="rounded bg-ink-700 px-2 py-0.5"><span id="lenB" class="text-slate-200">0</span> el</span>
+          </div>
+        </div>
+        <div class="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-widest text-fuchsia-500/70">
+          <i data-lucide="corner-left-down" class="h-3 w-3"></i> top
+          <span class="ml-auto flex items-center gap-1">bottom <i data-lucide="corner-right-down" class="h-3 w-3"></i></span>
+        </div>
+        <div id="trackB" class="stack-track"><p class="empty-note">empty</p></div>
+      </div>
+    </div>
+
+    <!-- ============ MODE A : replay controls ============ -->
+    <div id="panelReplay" class="hidden rounded-xl border border-ink-500/60 bg-ink-800/70 p-4">
+      <h3 class="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <i data-lucide="film" class="h-4 w-4 text-emerald-400"></i> script replay
+      </h3>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btnReset" class="btn-ctl" title="back to step 0 (Home)"><i data-lucide="rotate-ccw" class="h-4 w-4"></i> start</button>
+        <button id="btnPrev"  class="btn-ctl" title="step back (←)"><i data-lucide="skip-back" class="h-4 w-4"></i> prev</button>
+        <button id="btnPlay"  class="btn-primary min-w-[7.5rem]" title="play / pause (space)"><i data-lucide="play" class="h-4 w-4"></i> <span id="btnPlayText">play</span></button>
+        <button id="btnNext"  class="btn-ctl" title="step forward (→)">next <i data-lucide="skip-forward" class="h-4 w-4"></i></button>
+        <button id="btnEnd"   class="btn-ctl" title="jump to final state (End)">end <i data-lucide="fast-forward" class="h-4 w-4"></i></button>
+
+        <label class="ml-auto flex items-center gap-2 text-[11px] text-slate-400">
+          <i data-lucide="gauge" class="h-4 w-4 text-amber-400"></i>
+          <input id="speed" type="range" min="50" max="1000" step="50" value="250" class="range w-32 sm:w-44"
+                 aria-label="playback speed in milliseconds per operation">
+          <span id="speedVal" class="w-14 tabular-nums text-slate-300">250 ms</span>
+        </label>
+      </div>
+
+      <div class="mt-4">
+        <input id="scrub" type="range" min="0" max="0" step="1" value="0" class="range w-full"
+               aria-label="progress: jump to a step in the script">
+        <div class="mt-1 flex justify-between text-[11px] text-slate-400">
+          <span>start</span>
+          <span>step <span id="scrubNow" class="font-semibold text-slate-200">0</span> of <span id="scrubTotal">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODE B : manual keypad ============ -->
+    <div id="panelManual" class="rounded-xl border border-ink-500/60 bg-ink-800/70 p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <i data-lucide="gamepad-2" class="h-4 w-4 text-sky-400"></i> manual playground
+        </h3>
+        <div class="flex gap-2">
+          <button id="btnUndo" class="btn-ctl" title="undo last op (backspace)"><i data-lucide="undo-2" class="h-4 w-4"></i> undo</button>
+          <button id="btnResetManual" class="btn-ctl" title="reset to initial state"><i data-lucide="rotate-ccw" class="h-4 w-4"></i> reset</button>
+        </div>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="op-group">
+          <p class="op-group-title">swap <span class="kbd">s</span></p>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-op" data-op="sa">sa</button>
+            <button class="btn-op" data-op="sb">sb</button>
+            <button class="btn-op" data-op="ss">ss</button>
+          </div>
+        </div>
+        <div class="op-group">
+          <p class="op-group-title">push <span class="kbd">p</span></p>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-op" data-op="pa">pa</button>
+            <button class="btn-op" data-op="pb">pb</button>
+          </div>
+        </div>
+        <div class="op-group">
+          <p class="op-group-title">rotate <span class="kbd">r</span></p>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-op" data-op="ra">ra</button>
+            <button class="btn-op" data-op="rb">rb</button>
+            <button class="btn-op" data-op="rr">rr</button>
+          </div>
+        </div>
+        <div class="op-group">
+          <p class="op-group-title">reverse rotate <span class="kbd">v</span></p>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-op" data-op="rra">rra</button>
+            <button class="btn-op" data-op="rrb">rrb</button>
+            <button class="btn-op" data-op="rrr">rrr</button>
+          </div>
+        </div>
+      </div>
+
+      <p id="chordHint" class="mt-3 text-[11px] text-slate-400">
+        press a group key then a target: <span class="kbd">s</span>+<span class="kbd">a</span> = sa &middot;
+        <span class="kbd">p</span>+<span class="kbd">b</span> = pb &middot;
+        <span class="kbd">r</span>+<span class="kbd">r</span> = rr &middot;
+        <span class="kbd">v</span>+<span class="kbd">a</span> = rra
+      </p>
+    </div>
+
+    <!-- help -->
+    <div id="help" class="rounded-xl border border-ink-500/60 bg-ink-800/40 p-4 text-[12px] leading-relaxed text-slate-400">
+      <h3 class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <i data-lucide="keyboard" class="h-4 w-4 text-slate-500"></i> keyboard
+      </h3>
+      <div class="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+        <p><span class="kbd">&larr;</span> / <span class="kbd">&rarr;</span> step back / forward</p>
+        <p><span class="kbd">space</span> play / pause (replay mode)</p>
+        <p><span class="kbd">home</span> / <span class="kbd">end</span> first / last step</p>
+        <p><span class="kbd">backspace</span> undo (manual mode)</p>
+        <p><span class="kbd">s</span><span class="kbd">p</span><span class="kbd">r</span><span class="kbd">v</span> then <span class="kbd">a</span><span class="kbd">b</span><span class="kbd">s</span><span class="kbd">r</span> apply op</p>
+        <p><span class="kbd">esc</span> cancel a pending chord</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="mx-auto max-w-[1600px] px-4 pb-8 pt-2 text-center text-[11px] text-slate-400">
+  static build &middot; vanilla js + tailwind cdn + lucide &middot; drop it on github pages
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
