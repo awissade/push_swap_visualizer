@@ -1061,11 +1061,22 @@ document.querySelectorAll('[data-preset]').forEach((btn) => {
   });
 });
 
+dom.btnReverse.addEventListener('click', () => {
+  const cur = parseNumbers(dom.inputA.value);
+  const n = cur.ok && cur.values.length > 1 ? cur.values.length : 20;
+  const offset = Math.floor(n / 2);
+  const desc = [];
+  for (let i = n; i >= 1; i--) desc.push(i - offset);
+  dom.inputA.value = desc.join(' ');
+  showError(dom.inputError, null);
+  applyNumbersField();
+});
+
 function generateCustomRandom() {
   const val = dom.inputCustomCount.value.trim();
   const n = parseInt(val, 10);
   if (!n || n < 1) {
-    showError(dom.inputError, 'please enter a valid size (e.g. 50, 500).');
+    showError(dom.inputError, 'please type a valid number (e.g. 50, 500).');
     return;
   }
   if (n > 2000) {
@@ -1083,17 +1094,6 @@ dom.inputCustomCount.addEventListener('keydown', (e) => {
     e.preventDefault();
     generateCustomRandom();
   }
-});
-
-dom.btnReverse.addEventListener('click', () => {
-  const cur = parseNumbers(dom.inputA.value);
-  const n = cur.ok && cur.values.length > 1 ? cur.values.length : 20;
-  const offset = Math.floor(n / 2);
-  const desc = [];
-  for (let i = n; i >= 1; i--) desc.push(i - offset);
-  dom.inputA.value = desc.join(' ');
-  showError(dom.inputError, null);
-  applyNumbersField();
 });
 
 dom.inputA.addEventListener('input', () => {

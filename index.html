@@ -71,16 +71,30 @@
 
       <p id="inputError" class="mt-2 hidden items-start gap-1.5 rounded-md bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-300 ring-1 ring-rose-500/25"></p>
 
-      <div class="mt-3 grid grid-cols-2 gap-2">
+      <!-- Preset quick buttons -->
+      <div class="mt-3 grid grid-cols-3 gap-2">
         <button data-preset="5"   class="btn-ghost"><i data-lucide="dice-3" class="h-3.5 w-3.5"></i> random 5</button>
         <button data-preset="100" class="btn-ghost"><i data-lucide="dice-4" class="h-3.5 w-3.5"></i> random 100</button>
-        <div class="flex items-center rounded-lg border border-ink-500 bg-ink-900 overflow-hidden focus-within:border-emerald-500/70 focus-within:ring-1 focus-within:ring-emerald-500/30">
-          <input id="inputCustomCount" type="number" min="1" max="2000" placeholder="qty (e.g. 500)" class="w-full bg-transparent px-2.5 py-1 text-xs text-slate-100 placeholder-slate-400 outline-none" />
-          <button id="btnCustomRandom" type="button" title="generate random set" class="flex items-center gap-1 bg-ink-700 hover:bg-emerald-500/20 hover:text-emerald-300 text-slate-300 px-2 py-1.5 text-xs font-semibold transition">
-            <i data-lucide="dice-6" class="h-3.5 w-3.5"></i> rnd
-          </button>
-        </div>
         <button id="btnReverse"   class="btn-ghost"><i data-lucide="arrow-down-narrow-wide" class="h-3.5 w-3.5"></i> reverse</button>
+      </div>
+
+      <!-- Dedicated custom size bar -->
+      <div class="mt-2 flex items-center gap-2">
+        <input 
+          id="inputCustomCount" 
+          type="number" 
+          min="1" 
+          max="2000" 
+          placeholder="Type quantity (e.g. 500)..." 
+          class="w-full rounded-lg border border-ink-500 bg-ink-900 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 outline-none transition focus:border-emerald-500/70 focus:ring-1 focus:ring-emerald-500/30" 
+        />
+        <button 
+          id="btnCustomRandom" 
+          type="button" 
+          class="btn-ghost border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200 px-3 py-1.5 text-xs font-semibold whitespace-nowrap"
+        >
+          <i data-lucide="shuffle" class="h-3.5 w-3.5"></i> generate
+        </button>
       </div>
 
       <button id="btnLoad" class="btn-primary mt-2 w-full">
