@@ -53,6 +53,8 @@ const dom = {
   countBadge: $('countBadge'),
   btnLoad: $('btnLoad'),
   btnReverse: $('btnReverse'),
+  inputCustomCount: $('inputCustomCount'),
+  btnCustomRandom: $('btnCustomRandom'),
   btnClearOps: $('btnClearOps'),
 
   // badges
@@ -1057,6 +1059,30 @@ document.querySelectorAll('[data-preset]').forEach((btn) => {
     showError(dom.inputError, null);
     applyNumbersField();
   });
+});
+
+function generateCustomRandom() {
+  const val = dom.inputCustomCount.value.trim();
+  const n = parseInt(val, 10);
+  if (!n || n < 1) {
+    showError(dom.inputError, 'please enter a valid size (e.g. 50, 500).');
+    return;
+  }
+  if (n > 2000) {
+    showError(dom.inputError, 'maximum recommended size is 2000.');
+    return;
+  }
+  dom.inputA.value = randomSet(n).join(' ');
+  showError(dom.inputError, null);
+  applyNumbersField();
+}
+
+dom.btnCustomRandom.addEventListener('click', generateCustomRandom);
+dom.inputCustomCount.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    generateCustomRandom();
+  }
 });
 
 dom.btnReverse.addEventListener('click', () => {
